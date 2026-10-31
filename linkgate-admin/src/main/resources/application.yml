@@ -1,0 +1,31 @@
+# 管理/actuator HTTP 端口（与 Netty 网关端口分开，避免冲突）
+server:
+  port: 8090
+
+# 网关配置（数据面）
+linkgate:
+  port: 8080
+  node-id: node-local
+  redis:
+    enabled: true
+    uri: redis://127.0.0.1:6379
+    ttl: 60s
+  mysql:
+    enabled: true
+    url: jdbc:mysql://127.0.0.1:3306/linkgate?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: linkgate
+    password: linkgate
+  llm:
+    enabled: false
+    base-url:
+    api-key:
+    model: gpt-4o-mini
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
