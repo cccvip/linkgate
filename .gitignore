@@ -21,6 +21,8 @@ run-gateway.ps1
 
 # ---- 日志 ----
 *.log
+logs/*
+!logs/.gitkeep
 
 # ---- 本地 Docker 数据（保留目录结构，不提交数据文件）----
 docker/redis/data/*
