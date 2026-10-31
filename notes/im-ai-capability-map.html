@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>长连接 × AI 实时 · 能力地图</title>
+<style>
+  :root{
+    --paper: oklch(0.972 0.008 85);
+    --paper-2: oklch(0.955 0.010 84);
+    --card: oklch(0.987 0.006 85);
+    --ink: oklch(0.24 0.018 250);
+    --ink-2: oklch(0.43 0.016 250);
+    --muted: oklch(0.57 0.014 250);
+    --line: oklch(0.88 0.010 84);
+    --line-2: oklch(0.82 0.012 84);
+
+    --left: oklch(0.50 0.075 196);
+    --left-2: oklch(0.42 0.070 196);
+    --left-soft: oklch(0.945 0.030 196);
+    --left-line: oklch(0.86 0.035 196);
+
+    --right: oklch(0.63 0.150 45);
+    --right-2: oklch(0.50 0.140 42);
+    --right-soft: oklch(0.950 0.045 62);
+    --right-line: oklch(0.87 0.055 60);
+
+    --focus: oklch(0.55 0.14 250);
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sp-1: 6px; --sp-2: 12px; --sp-3: 18px; --sp-4: 28px; --sp-5: 40px; --sp-6: 64px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: oklch(0.90 0.06 60); }
+  .wrap{ max-width: 1080px; margin: 0 auto; padding: var(--sp-5) clamp(18px, 4vw, 40px) var(--sp-6); }
+
+  header{ max-width: 52ch; }
+  .eyebrow{
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--right-2); margin: 0 0 var(--sp-2);
+  }
+  h1{
+    font-size: clamp(1.9rem, 5vw, 2.9rem); line-height: 1.1; letter-spacing: -0.018em;
+    font-weight: 700; margin: 0 0 var(--sp-3);
+  }
+  h1 em{ font-style: normal; color: var(--left); }
+  h1 b{ font-weight: 700; color: var(--right-2); }
+  .lede{ font-size: 1.05rem; color: var(--ink-2); margin: 0; max-width: 60ch; }
+
+  .legend{ display:flex; gap:18px; flex-wrap:wrap; margin: var(--sp-4) 0 0; font-size:0.84rem; color: var(--muted); }
+  .legend span{ display:inline-flex; align-items:center; gap:8px; }
+  .swatch{ width:22px; height:8px; border-radius:99px; }
+  .swatch.l{ background: var(--left); }
+  .swatch.r{ background: var(--right); }
+
+  /* ---- section head ---- */
+  .shead{ margin: var(--sp-6) 0 var(--sp-3); display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .shead h2{ font-size: 1.28rem; letter-spacing:-0.012em; margin:0; }
+  .shead .hint{ font-size: 0.84rem; color: var(--muted); }
+
+  /* ---- bridge rows ---- */
+  .bridges{ display:flex; flex-direction:column; gap:10px; }
+  .bp{ border-bottom: 1px solid var(--line); }
+  .bp:last-child{ border-bottom:none; }
+
+  .bp-head{
+    appearance:none; border:0; background:transparent; font:inherit; text-align:left; width:100%;
+    padding: 14px 8px; cursor:pointer; border-radius: 10px;
+    display:grid; grid-template-columns: minmax(0,1fr) 72px minmax(0,1fr); align-items:center; gap:14px;
+    transition: background .18s ease;
+  }
+  .bp-head:hover{ background: var(--paper-2); }
+  .bp-head:focus-visible{ outline:none; box-shadow: 0 0 0 3px var(--focus); }
+
+  .node{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .node .tag{
+    font-family: var(--mono); font-size: 0.64rem; letter-spacing:0.1em; text-transform:uppercase; opacity:0.7;
+  }
+  .node .t{ font-weight:600; font-size:0.97rem; letter-spacing:-0.006em; }
+  .node .s{ font-size:0.8rem; color: var(--muted); }
+  .node.right{ text-align:right; align-items:flex-end; }
+
+  .node.left .t{ color: var(--left-2); }
+  .node.left .tag{ color: var(--left); }
+  .node.right .t{ color: var(--right-2); }
+  .node.right .tag{ color: var(--right); }
+
+  .bridge{ position:relative; height:2px; background: linear-gradient(90deg, var(--left), var(--right)); border-radius:2px; }
+  .bridge .badge{
+    position:absolute; left:50%; top:50%; transform: translate(-50%,-50%);
+    width:26px; height:26px; border-radius:50%;
+    background: var(--card); border:1.5px solid var(--line-2);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mono); font-size:0.72rem; color: var(--ink-2);
+    transition: transform .2s ease, border-color .2s ease, background .2s ease, color .2s ease;
+  }
+  .bp-head:hover .bridge .badge{ transform: translate(-50%,-50%) scale(1.08); }
+  .bp.open .bridge .badge{ background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  .bp-panel{ display:grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(.22,.8,.3,1); }
+  .bp.open .bp-panel{ grid-template-rows: 1fr; }
+  .bp-panel > .inner{ overflow:hidden; }
+  .say{
+    margin: 0 8px 18px; padding: 16px 18px;
+    background: linear-gradient(180deg, oklch(0.98 0.01 70), var(--card));
+    border: 1px solid var(--line); border-left: 3px solid var(--right);
+    border-radius: 10px;
+  }
+  .say .k{
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing:0.1em; text-transform:uppercase;
+    color: var(--right-2); display:block; margin-bottom:6px;
+  }
+  .say p{ margin:0; color: var(--ink-2); font-size:0.93rem; }
+  .say p + p{ margin-top:8px; }
+
+  /* ---- ladder ---- */
+  .ladder{ display:flex; flex-direction:column; gap:2px; counter-reset: step; }
+  .step{
+    display:grid; grid-template-columns: 58px 92px minmax(0,1fr); align-items:center; gap:14px;
+    padding: 13px 16px; border-radius:8px;
+    background: oklch(0.985 0.006 85);
+    border:1px solid var(--line);
+    position:relative;
+  }
+  .step .lv{ font-family:var(--mono); font-size:0.8rem; font-weight:600; color: var(--left); }
+  .step .name{ font-weight:600; font-size:0.92rem; }
+  .step .desc{ font-size:0.86rem; color: var(--muted); }
+  .step.hot{ border-color: var(--left-line); background: var(--left-soft); }
+  .step.hot .name{ color: var(--left-2); }
+  .step.hot .lv{ color: var(--left-2); }
+  .step .flag{
+    position:absolute; right:14px; top:50%; transform:translateY(-50%);
+    font-family:var(--mono); font-size:0.64rem; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--left-2); opacity:0.85;
+  }
+  @media (max-width: 640px){
+    .step{ grid-template-columns: 46px minmax(0,1fr); gap:10px; }
+    .step .desc{ grid-column: 1 / -1; }
+    .step .flag{ position:static; transform:none; margin-top:6px; display:block; }
+  }
+
+  /* ---- footer goal ---- */
+  .goal{
+    margin-top: var(--sp-5); padding: var(--sp-4);
+    border:1px dashed var(--line-2); border-radius:12px; background: var(--paper-2);
+  }
+  .goal h3{ margin:0 0 10px; font-size:1rem; }
+  .goal ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .goal li{ font-size:0.92rem; color: var(--ink-2); display:flex; gap:10px; align-items:baseline; }
+  .goal li .b{ font-family:var(--mono); font-size:0.66rem; color: var(--paper); background: var(--ink); padding:2px 7px; border-radius:99px; flex:none; }
+  .goal li em{ font-style:normal; color: var(--right-2); font-weight:600; }
+  .goal li i{ font-style:normal; color: var(--left-2); font-weight:600; }
+
+  @media (max-width: 760px){
+    .bp-head{ grid-template-columns: 1fr; gap:8px; padding:14px 6px; }
+    .node.right{ text-align:left; align-items:flex-start; }
+    .bridge{ height:22px; width:2px; background: linear-gradient(180deg, var(--left), var(--right)); justify-self:start; margin-left:8px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ transition-duration:0.001ms !important; animation-duration:0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">能力地图 · IM × AI 实时</p>
+    <h1>把 <em>长连接</em> 用在 <b>AI</b> 上</h1>
+    <p class="lede">左边是你已有的长连接底子，右边是 AI 实时场景，中间是那座桥。点开每座桥，看面试时具体怎么讲。</p>
+    <div class="legend">
+      <span><i class="swatch l"></i>长连接 / Netty 能力</span>
+      <span><i class="swatch r"></i>AI 实时场景</span>
+    </div>
+  </header>
+
+  <div class="shead">
+    <h2>六座桥</h2>
+    <span class="hint">点击展开「面试怎么讲」</span>
+  </div>
+  <div class="bridges" id="bridges"></div>
+
+  <div class="shead">
+    <h2>长连接要挖到什么程度</h2>
+    <span class="hint">目标：至少到 L4，讲得出 L5</span>
+  </div>
+  <div class="ladder" id="ladder"></div>
+
+  <div class="goal">
+    <h3>你的护城河，写成两句话</h3>
+    <ul>
+      <li><span class="b">硬指标</span><span>扛过 <i>十万级长连接</i>；做过 Netty 层面的性能调优、压测与故障演练。</span></li>
+      <li><span class="b">AI 特性</span><span>做过 <em>LLM 流式输出</em> / 实时语音 / 多 Agent 事件流，讲得清端到端的稳定性设计。</span></li>
+      <li><span class="b">合起来</span><span>既要 JD4（AI + 实时通信）的门槛，又够得着 JD3（AI 应用）的边。</span></li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var BRIDGES = [
+    {
+      n:1,
+      left:{ tag:"长连接", t:"流式推送 (WebSocket / SSE)", s:"分片 · 背压 · 断线续传" },
+      right:{ tag:"AI 场景", t:"LLM 流式输出", s:"token 流实时推到客户端" },
+      say:["LLM 的流式输出，本质上是一类特殊的消息流：把模型吐出的 token 分片、按背压推送、断线还能续传。长连接做不好，AI 的「打字机效果」就是卡顿和丢字。",
+           "面试话术：「我把 LLM 的流式输出当成消息推送来设计——分片、背压、续传，端到端保证不丢不乱。」"]
+    },
+    {
+      n:2,
+      left:{ tag:"长连接", t:"心跳保活 / 断线重连", s:"幂等重连 · 会话续传 · 状态恢复" },
+      right:{ tag:"AI 场景", t:"长任务 AI 会话", s:"语音 Agent / 长对话，怕断连丢上下文" },
+      say:["AI 会话，尤其是长任务和语音场景，最怕断连丢上下文。你的重连 + 状态恢复能力，直接对应「会话不丢」。",
+           "面试话术：「AI 长会话对连接稳定性要求极高，我用幂等重连 + 状态快照，保证断线后无缝续接、上下文不丢。」"]
+    },
+    {
+      n:3,
+      left:{ tag:"长连接", t:"消息可靠性与时序", s:"确认重传 · 去重 · 离线补偿" },
+      right:{ tag:"AI 场景", t:"多 Agent 事件流 / trace 推送", s:"思考、工具调用、结果的有序事件" },
+      say:["多 Agent 协作会产出大量有序事件（思考、工具调用、结果、进度），要求有序、不丢、可回放。这正是 IM 的消息可靠性问题换了个壳。",
+           "面试话术：「多 Agent 的执行轨迹是一条有序事件流，我用消息可靠性那套——顺序、去重、离线补偿——保证 trace 不丢不乱。」"]
+    },
+    {
+      n:4,
+      left:{ tag:"长连接", t:"连接管理 / 会话状态", s:"多端同步 · 连接生命周期" },
+      right:{ tag:"AI 场景", t:"AI 客服多端会话", s:"同一用户跨设备，状态要一致" },
+      say:["同一用户可能在手机、PC、小程序上同时问同一个 AI。多端会话状态一致性，本质就是 IM 的会话同步问题。",
+           "面试话术：「AI 客服的多端一致性，就是 IM 的会话同步问题——我用连接管理 + 会话状态机来收敛状态。」"]
+    },
+    {
+      n:5,
+      left:{ tag:"长连接", t:"编解码 / 自定义协议", s:"ByteBuf · 粘包拆包 · 二进制协议" },
+      right:{ tag:"AI 场景", t:"实时语音 / 多模态", s:"低延迟音频流，双工对话" },
+      say:["实时语音 Agent 需要低延迟的二进制通道来跑音频流，还要求全双工。协议设计与高效编解码的经验可以直接迁移。",
+           "面试话术：「实时语音需要低延迟二进制通道，我做过自定义协议和编解码，知道怎么把延迟和抖压下来。」"]
+    },
+    {
+      n:6,
+      left:{ tag:"长连接", t:"高并发 / 性能调优", s:"零拷贝 · 内存池 · GC" },
+      right:{ tag:"AI 场景", t:"推理服务的接入网关", s:"高并发请求的第一道入口" },
+      say:["AI 推理服务要扛并发，而长连接网关就是它面向用户的第一道入口。你能扛的连接量，直接决定推理服务的可用性。",
+           "面试话术：「推理服务的高并发入口就是长连接网关，我扛过的连接量和调优经验，正好落在这个位置。」"]
+    }
+  ];
+
+  var LADDER = [
+    { lv:"L1", name:"会用",   desc:"写过 Netty / WebSocket 服务，能跑起来", hot:false },
+    { lv:"L2", name:"懂原理", desc:"EventLoop 线程模型、ByteBuf、粘包拆包", hot:false },
+    { lv:"L3", name:"能设计", desc:"自定义协议、心跳重连、消息可靠性、背压", hot:true },
+    { lv:"L4", name:"能扛量", desc:"十万级连接、性能调优、内存与 GC", hot:true, flag:"面试底线" },
+    { lv:"L5", name:"护城河", desc:"源码级调优、零拷贝、压测与故障演练", hot:false, flag:"加分" }
+  ];
+
+  var bridgesEl = document.getElementById("bridges");
+  var ladderEl  = document.getElementById("ladder");
+
+  BRIDGES.forEach(function(b){
+    var wrap = document.createElement("div");
+    wrap.className = "bp";
+
+    var head = document.createElement("button");
+    head.className = "bp-head";
+    head.type = "button";
+    head.setAttribute("aria-expanded", "false");
+    head.innerHTML =
+      '<span class="node left"><span class="tag">' + b.left.tag + '</span>' +
+        '<span class="t">' + b.left.t + '</span><span class="s">' + b.left.s + '</span></span>' +
+      '<span class="bridge"><span class="badge">' + b.n + '</span></span>' +
+      '<span class="node right"><span class="tag">' + b.right.tag + '</span>' +
+        '<span class="t">' + b.right.t + '</span><span class="s">' + b.right.s + '</span></span>';
+
+    var panel = document.createElement("div");
+    panel.className = "bp-panel";
+    var say = '<div class="say"><span class="k">面试怎么讲</span>';
+    b.say.forEach(function(p){ say += '<p>' + p + '</p>'; });
+    say += '</div>';
+    panel.innerHTML = '<div class="inner">' + say + '</div>';
+
+    head.addEventListener("click", function(){
+      var open = wrap.classList.toggle("open");
+      head.setAttribute("aria-expanded", String(open));
+    });
+
+    wrap.appendChild(head);
+    wrap.appendChild(panel);
+    bridgesEl.appendChild(wrap);
+  });
+
+  LADDER.forEach(function(s){
+    var d = document.createElement("div");
+    d.className = "step" + (s.hot ? " hot" : "");
+    d.innerHTML =
+      '<span class="lv">' + s.lv + '</span>' +
+      '<span class="name">' + s.name + '</span>' +
+      '<span class="desc">' + s.desc + '</span>' +
+      (s.flag ? '<span class="flag">' + s.flag + '</span>' : '');
+    ladderEl.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>

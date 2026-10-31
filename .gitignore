@@ -1,0 +1,44 @@
+# ---- 构建产物 ----
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+dependency-reduced-pom.xml
+.mvn/timing.properties
+
+# 临时 classpath / 跑批输出
+cp.txt
+*.pid
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# 本地启动脚本（不提交）
+run-gateway.ps1
+
+# ---- 日志 ----
+*.log
+
+# ---- 本地 Docker 数据（保留目录结构，不提交数据文件）----
+docker/redis/data/*
+docker/mysql/data/*
+!docker/redis/data/.gitkeep
+!docker/mysql/data/.gitkeep
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+
+# ---- Command Code 本地状态 ----
+.commandcode/
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db

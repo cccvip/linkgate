@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>企业级 Agent 平台 · 分层解剖</title>
+<style>
+  :root{
+    --paper: oklch(0.972 0.008 85);
+    --paper-2: oklch(0.955 0.010 84);
+    --ink: oklch(0.24 0.018 250);
+    --ink-2: oklch(0.42 0.016 250);
+    --muted: oklch(0.56 0.014 250);
+    --line: oklch(0.88 0.010 84);
+    --line-2: oklch(0.82 0.012 84);
+    --accent: oklch(0.64 0.155 45);
+    --accent-ink: oklch(0.40 0.11 42);
+    --focus: oklch(0.55 0.14 250);
+
+    --c-app:     oklch(0.72 0.140 48);
+    --c-devex:   oklch(0.855 0.032 206);
+    --c-gov:     oklch(0.775 0.042 208);
+    --c-orch:    oklch(0.690 0.048 210);
+    --c-know:    oklch(0.605 0.052 212);
+    --c-tools:   oklch(0.515 0.056 213);
+    --c-runtime: oklch(0.425 0.056 214);
+    --c-model:   oklch(0.335 0.050 215);
+
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+
+    --r: 12px;
+    --sp-1: 6px;  --sp-2: 12px; --sp-3: 18px; --sp-4: 28px; --sp-5: 40px; --sp-6: 64px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection{ background: oklch(0.88 0.06 60); }
+
+  .wrap{ max-width: 1120px; margin: 0 auto; padding: var(--sp-5) clamp(18px, 4vw, 40px) var(--sp-6); }
+
+  /* ---------- header ---------- */
+  header{ max-width: 46ch; }
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 var(--sp-2);
+  }
+  h1{
+    font-size: clamp(2rem, 5.4vw, 3.15rem);
+    line-height: 1.08;
+    letter-spacing: -0.018em;
+    font-weight: 700;
+    margin: 0 0 var(--sp-3);
+  }
+  .lede{ font-size: 1.06rem; color: var(--ink-2); margin: 0 0 var(--sp-2); max-width: 60ch; }
+  .formula{
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0;
+    padding-left: var(--sp-3);
+    border-left: 2px solid var(--line-2);
+  }
+
+  /* ---------- view tabs ---------- */
+  .views{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: var(--sp-5) 0 var(--sp-2);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .views button{
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .18s ease, background .18s ease, border-color .18s ease;
+  }
+  .views button:hover{ color: var(--ink); background: var(--paper-2); }
+  .views button[aria-selected="true"]{
+    color: var(--ink);
+    background: oklch(0.93 0.02 60);
+    border-color: var(--line-2);
+    font-weight: 600;
+  }
+  .views button:focus-visible{ outline: none; box-shadow: 0 0 0 3px var(--focus); }
+  .view-note{
+    font-size: 0.86rem;
+    color: var(--muted);
+    min-height: 1.5em;
+    margin: 0 0 var(--sp-4);
+  }
+  .view-note b{ color: var(--accent-ink); font-weight: 600; }
+
+  /* ---------- board ---------- */
+  .board{
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+  }
+
+  /* ---------- strata stack ---------- */
+  .stack-cap{
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .stack{ display: flex; flex-direction: column; gap: 5px; }
+  .band{
+    appearance: none;
+    text-align: left;
+    font: inherit;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 13px 16px;
+    cursor: pointer;
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    transition: transform .2s cubic-bezier(.22,.9,.35,1), opacity .2s ease, box-shadow .2s ease, filter .2s ease;
+    background: var(--c);
+  }
+  .band[data-tone="light"]{ color: oklch(0.97 0.005 90); }
+  .band .b-name{ font-weight: 600; font-size: 1rem; letter-spacing: -0.006em; }
+  .band .b-sub{ font-size: 0.78rem; opacity: 0.82; margin-top: 1px; font-weight: 400; }
+  .band .b-mark{
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    opacity: 0.9;
+    border: 1px solid currentColor;
+  }
+  .band:hover{ transform: translateX(3px); }
+  .band:focus-visible{ outline: none; box-shadow: 0 0 0 3px var(--focus), 0 0 0 6px var(--paper); }
+  .band[aria-pressed="true"]{
+    box-shadow: 0 0 0 2px var(--ink), 0 4px 14px oklch(0.24 0.02 250 / 0.14);
+    transform: translateX(3px);
+  }
+  .band.is-dim{ filter: grayscale(0.82) opacity(0.42); }
+  .band.is-focus{ box-shadow: 0 0 0 2px var(--focus); }
+
+  .stack-foot{
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 12px 2px 0;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .stack-foot span{ display: inline-flex; align-items: center; gap: 6px; }
+  .dot{ width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .dot.base{ background: var(--c-runtime); }
+  .dot.app{ background: var(--c-app); }
+
+  /* ---------- detail ---------- */
+  .detail{
+    position: sticky;
+    top: 24px;
+    background: oklch(0.985 0.006 85);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: var(--sp-4);
+    box-shadow: 0 1px 0 oklch(1 0 0 / 0.7) inset, 0 10px 30px oklch(0.24 0.02 250 / 0.05);
+    min-height: 340px;
+  }
+  .detail .d-eyebrow{
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .detail h2{ font-size: 1.32rem; letter-spacing: -0.012em; margin: 0 0 4px; }
+  .detail .d-sub{ color: var(--muted); font-size: 0.86rem; margin: 0 0 var(--sp-3); }
+  .detail dl{ margin: 0; }
+  .detail dt{
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: var(--sp-3) 0 3px;
+  }
+  .detail dd{ margin: 0; color: var(--ink-2); font-size: 0.93rem; }
+  .detail dd .code{
+    font-family: var(--mono);
+    font-size: 0.84rem;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: var(--ink);
+  }
+  .detail .tag-row{ display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .detail .tag{
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+  }
+  .detail .tag.have{ background: oklch(0.93 0.05 155); border-color: oklch(0.82 0.06 155); color: oklch(0.34 0.08 155); }
+  .detail .tag.part{ background: oklch(0.94 0.05 75); border-color: oklch(0.84 0.07 75); color: oklch(0.40 0.09 70); }
+  .detail .tag.none{ background: oklch(0.92 0.01 250); color: var(--muted); }
+
+  .intro h2{ font-size: 1.18rem; margin: 0 0 var(--sp-2); }
+  .intro p{ color: var(--ink-2); font-size: 0.93rem; margin: 0 0 var(--sp-2); }
+  .intro ol{ margin: 0; padding-left: 1.1em; color: var(--ink-2); font-size: 0.9rem; }
+  .intro li{ margin: 4px 0; }
+
+  /* ---------- enterprise chips ---------- */
+  .enterprise{ margin-top: var(--sp-6); }
+  section h2.sec{
+    font-size: 1.32rem;
+    letter-spacing: -0.012em;
+    margin: 0 0 var(--sp-1);
+  }
+  .sec-sub{ color: var(--muted); font-size: 0.9rem; margin: 0 0 var(--sp-4); max-width: 62ch; }
+  .chips{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .chip{ background: oklch(0.985 0.006 85); padding: var(--sp-3); }
+  .chip h3{ margin: 0 0 4px; font-size: 0.95rem; letter-spacing: -0.006em; }
+  .chip p{ margin: 0; font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+  .chip .k{ font-family: var(--mono); font-size: 0.66rem; color: var(--accent-ink); display: block; margin-bottom: 6px; letter-spacing: 0.08em; }
+
+  /* ---------- positions ---------- */
+  .positions{ margin-top: var(--sp-6); }
+  .cards{ display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); }
+  .card{
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: var(--sp-3);
+    background: oklch(0.985 0.006 85);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card .c-top{ display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .card h3{ margin: 0; font-size: 1.02rem; letter-spacing: -0.008em; }
+  .card .swatch{ width: 26px; height: 8px; border-radius: 4px; flex: none; }
+  .card .role{ font-family: var(--mono); font-size: 0.68rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .card p{ margin: 0; font-size: 0.88rem; color: var(--ink-2); }
+  .card .verdict{
+    margin-top: auto;
+    font-size: 0.84rem;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line-2);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+
+  footer{
+    margin-top: var(--sp-6);
+    padding-top: var(--sp-3);
+    border-top: 1px solid var(--line);
+    font-size: 0.92rem;
+    color: var(--ink-2);
+  }
+  footer b{ color: var(--ink); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px){
+    .board{ grid-template-columns: 1fr; }
+    .detail{ position: static; min-height: 0; }
+    .cards{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px){
+    .wrap{ padding: var(--sp-4) 16px var(--sp-5); }
+    .band{ padding: 11px 13px; }
+    .band .b-sub{ display: none; }
+    .views{ gap: 2px; }
+    .views button{ padding: 7px 11px; font-size: 0.84rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+    .band:hover{ transform: none; }
+  }
+
+  @keyframes rise{
+    from{ opacity: 0; transform: translateY(10px); }
+    to{ opacity: 1; transform: none; }
+  }
+  .band{ animation: rise .42s cubic-bezier(.2,.8,.3,1) backwards; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">学习地图 · Agent 平台</p>
+    <h1>企业级 Agent 平台</h1>
+    <p class="lede">把「做一个 Agent」从每个团队各自造轮子，变成公司提供标准化积木、上层业务拼装的那一层基础设施。</p>
+    <p class="formula">≈ Spring Cloud + 工作流引擎 + API 网关 + 配置中心 + 链路追踪</p>
+  </header>
+
+  <div class="views" role="tablist" aria-label="对比视图">
+    <button role="tab" data-view="stack" aria-selected="true">平台分层</button>
+    <button role="tab" data-view="pi" aria-selected="false">pi 覆盖了哪些</button>
+    <button role="tab" data-view="jd1" aria-selected="false">上一份 JD 在哪</button>
+    <button role="tab" data-view="jd2" aria-selected="false">这一份 JD 在哪</button>
+  </div>
+  <p class="view-note" id="viewNote" aria-live="polite"></p>
+
+  <div class="board">
+    <div>
+      <div class="stack-cap"><span>自下而上 · 地层剖面</span><span>点每一层看详情</span></div>
+      <div class="stack" id="stack"></div>
+      <div class="stack-foot">
+        <span><i class="dot base"></i>底座 7 层（平台职责）</span>
+        <span><i class="dot app"></i>业务 1 层（应用职责）</span>
+      </div>
+    </div>
+
+    <aside class="detail" id="detail"></aside>
+  </div>
+
+  <section class="enterprise">
+    <h2 class="sec">「企业级」三个字，额外加了什么</h2>
+    <p class="sec-sub">这才是和「个人玩具」的分水岭。下面每一条，都是单机 harness（比如 pi）刻意不做、而平台必须做的事。</p>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="positions">
+    <h2 class="sec">三者的定位</h2>
+    <p class="sec-sub">同一个平台，三个不同的位置。看清自己站在哪一层，比背概念更重要。</p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <footer>
+    <b>一句话收束：</b>企业 Agent 平台，就是把 pi 这类 harness 从「开发者玩具」升级成「公司级基础设施」的那一层。
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // 自上而下：应用层 → 模型接入
+  var LAYERS = [
+    {
+      id:"app", name:"应用层", sub:"客服 / 销售 / HR / IT 运维等业务 Agent",
+      color:"var(--c-app)", tone:"dark", pi:"full", j1:null, j2:null,
+      what:"落地到具体业务场景的 Agent。这一层是「业务」，应当做薄，把共性都推给下面的底座。",
+      analogy:"业务微服务",
+      pi:"pi 自己就是一个具体的编码 Agent，正属于这一层。",
+      jd:"由上层业务团队负责，平台只提供底座支撑。",
+      ent:"业务隔离、专属知识库、专属工具集。"
+    },
+    {
+      id:"devex", name:"开发 / 交付", sub:"低代码画布、SDK、Agent 市场、调试工具",
+      color:"var(--c-devex)", tone:"light", pi:"part", j1:null, j2:"rel",
+      what:"让团队「少写代码就能搭出 Agent」的交付层：可视化编排画布、SDK、模板市场、调试与灰度发布。",
+      analogy:"脚手架 + Maven 私服",
+      pi:"有 extensions / skills / SDK，但面向单个开发者，没有团队级市场与画布。",
+      jd:"这一份 JD 第 1 条的「标准化产品底座」正指这里。",
+      ent:"模板复用、版本发布、灰度与回滚。"
+    },
+    {
+      id:"gov", name:"治理 / 评测", sub:"Eval、trace、权限、审计、Prompt 与成本管理",
+      color:"var(--c-gov)", tone:"light", pi:"part", j1:"rel", j2:"core",
+      what:"让 Agent「可度量、可追溯、可管住」的一层：效果评测、全链路 trace、权限与审计、Prompt/版本/成本管理。",
+      analogy:"SkyWalking + 配置中心",
+      pi:"有一份可观测性设计文档 + 确定性的 faux provider 用于测试，但没有独立的 eval / trace 落地。",
+      jd:"两份 JD 都反复强调；这一份 JD 第 3 条就是「Agent 效果评估体系」。",
+      ent:"效果可度量、行为可追溯、成本可核算。"
+    },
+    {
+      id:"orch", name:"编排 / 协作", sub:"任务规划、多 Agent 协作、workflow",
+      color:"var(--c-orch)", tone:"light", pi:"none", j1:null, j2:"core",
+      what:"把复杂任务拆成计划并调度多个角色协作：任务规划（planning）、多 Agent 协作、工作流编排。",
+      analogy:"Activiti / Flowable 工作流引擎",
+      pi:"只有单 Agent 循环，没有多 Agent 协作与独立规划层。",
+      jd:"这一份 JD 第 2 条的「任务规划、多智能体协作」就在这层。",
+      ent:"长事务编排、人工介入、失败补偿。"
+    },
+    {
+      id:"know", name:"知识与记忆", sub:"RAG、向量库、知识库、长 / 短期记忆",
+      color:"var(--c-know)", tone:"light", pi:"part", j1:null, j2:"core",
+      what:"给 Agent 外部知识与记忆：检索增强（RAG）、向量库、企业知识库、跨会话长期记忆、知识工程。",
+      analogy:"Elasticsearch + 缓存",
+      pi:"有上下文压缩和 JSONL 会话树（短期记忆 + 快照），但没有 RAG 与企业知识库。",
+      jd:"这一份 JD 第 2 条的「记忆模块、知识工程」就在这层。",
+      ent:"知识权限、命中溯源、脏数据治理。"
+    },
+    {
+      id:"tools", name:"工具 / 集成", sub:"工具注册中心、MCP、连接 ERP/CRM/OA",
+      color:"var(--c-tools)", tone:"light", pi:"full", j1:"rel", j2:"rel",
+      what:"让 Agent 能动手做事：工具注册中心、MCP 协议、连接企业内部系统（ERP / CRM / OA / 数据库）。",
+      analogy:"服务注册 + 连接器",
+      pi:"有完整的工具注册与编排（读/写/执行、并行、权限钩子），也支持扩展注入工具。",
+      jd:"两份 JD 都涉及；这一份 JD 明确要「MCP」。",
+      ent:"谁能用哪个工具、调用留痕、超时熔断。"
+    },
+    {
+      id:"runtime", name:"Agent 运行时", sub:"AgentLoop、工具编排、状态管理",
+      color:"var(--c-runtime)", tone:"light", pi:"full", j1:"core", j2:"rel",
+      what:"引擎心脏：推理-行动循环（AgentLoop）、指令调度、工具编排、运行环境与状态管理。",
+      analogy:"应用容器 / 运行时",
+      pi:"核心所在。agent-loop 明确实现了「调 LLM → 执行工具 → 结果回灌」的循环。",
+      jd:"上一份 JD 的核心，就是招这个「运行时引擎」岗。",
+      ent:"多租户隔离、高并发、故障隔离。"
+    },
+    {
+      id:"model", name:"模型接入 / 网关", sub:"多模型路由、鉴权、限流、计费、降级",
+      color:"var(--c-model)", tone:"light", pi:"full", j1:"rel", j2:null,
+      what:"统一入口：多模型路由、密钥托管、限流与配额、计费、降级与缓存（前缀缓存 / 流式输出）。",
+      analogy:"Spring Cloud Gateway",
+      pi:"做得很深：约 40 家 provider、统一事件协议、SSE / WebSocket 流式。",
+      jd:"两份 JD 都涉及；上一份 JD 强调流式与前缀缓存。",
+      ent:"密钥不进业务、配额分摊、成本核算。"
+    }
+  ];
+
+  var CHIPS = [
+    { k:"TENANCY",   h:"多租户隔离",   p:"一个平台给全公司用，租户之间的数据与资源必须隔离。" },
+    { k:"AUDIT",     h:"权限与审计",   p:"谁能用哪个工具、谁改了 Prompt、谁烧了多少钱，全程留痕。" },
+    { k:"EVAL",      h:"效果可度量",   p:"用评测集量化好坏，而不是靠手感调 Prompt。" },
+    { k:"TRACE",     h:"行为可追溯",   p:"trace 记录每一步推理与工具调用，可回放、可定位。" },
+    { k:"COST",      h:"成本可核算",   p:"token / 调用 / 模型成本，按租户与场景分摊。" },
+    { k:"COMPLIANCE",h:"安全合规",     p:"数据不出内网，支持私有化部署与合规审计。" },
+    { k:"SLA",       h:"稳定性",       p:"SLA、高并发、故障降级，保障生产可用。" }
+  ];
+
+  var CARDS = [
+    {
+      title:"pi（你手上的 harness）", role:"教材",
+      color:"var(--c-runtime)",
+      body:"开源、单机、面向单个开发者。强在运行时 / 工具 / 记忆 / 多 provider 流式；缺的恰好是「企业级」那一列。",
+      verdict:"用法：逐层对照，讲清「有」和「没有」。"
+    },
+    {
+      title:"上一份 JD", role:"运行时引擎岗",
+      color:"var(--c-model)",
+      body:"平台最底层第 2 层。要 Rust / C++ / Go 功底、高并发、沙箱、多租户。",
+      verdict:"接近 Agent 岗天花板：非首选目标。"
+    },
+    {
+      title:"这一份 JD", role:"底座 / 产品岗",
+      color:"var(--c-know)",
+      body:"平台中上层（知识记忆 / 编排 / 治理 / 交付）。Java 即达标、1 年经验即可；重记忆、多 Agent、评测、标品化。",
+      verdict:"与你现在差距最小：现实目标。"
+    }
+  ];
+
+  var VIEWS = {
+    stack: "",
+    pi:   "已在 <b>pi</b> 里实现的层被点亮，灰色是它刻意没做的部分。",
+    jd1:  "<b>上一份 JD</b> 只压在一层：Agent 运行时，再带一点模型接入与治理。",
+    jd2:  "<b>这一份 JD</b> 压在中上层四层：知识与记忆、编排协作、治理评测、开发交付。"
+  };
+
+  var state = { view:"stack", selected:null };
+
+  var stackEl  = document.getElementById("stack");
+  var detailEl = document.getElementById("detail");
+  var noteEl   = document.getElementById("viewNote");
+  var chipsEl  = document.getElementById("chips");
+  var cardsEl  = document.getElementById("cards");
+  var tabs     = Array.prototype.slice.call(document.querySelectorAll(".views button"));
+
+  // ---- build stack ----
+  LAYERS.forEach(function(L, i){
+    var b = document.createElement("button");
+    b.className = "band";
+    b.type = "button";
+    b.dataset.id = L.id;
+    b.dataset.tone = L.tone;
+    b.dataset.pi = L.pi;
+    b.dataset.j1 = L.j1 || "";
+    b.dataset.j2 = L.j2 || "";
+    b.style.setProperty("--c", L.color);
+    b.style.animationDelay = (i * 45) + "ms";
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML =
+      '<span><span class="b-name">' + L.name + '</span>' +
+      '<span class="b-sub">' + L.sub + '</span></span>' +
+      '<span class="b-mark"></span>';
+    b.addEventListener("click", function(){
+      state.selected = (state.selected === L.id) ? null : L.id;
+      render();
+    });
+    stackEl.appendChild(b);
+  });
+
+  // ---- build chips ----
+  CHIPS.forEach(function(c){
+    var d = document.createElement("div");
+    d.className = "chip";
+    d.innerHTML = '<span class="k">' + c.k + '</span><h3>' + c.h + '</h3><p>' + c.p + '</p>';
+    chipsEl.appendChild(d);
+  });
+
+  // ---- build cards ----
+  CARDS.forEach(function(c){
+    var d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML =
+      '<div class="c-top"><h3>' + c.title + '</h3><span class="swatch" style="background:' + c.color + '"></span></div>' +
+      '<span class="role">' + c.role + '</span>' +
+      '<p>' + c.body + '</p>' +
+      '<div class="verdict">' + c.verdict + '</div>';
+    cardsEl.appendChild(d);
+  });
+
+  // ---- tabs ----
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){
+      state.view = t.dataset.view;
+      render();
+    });
+  });
+
+  function coverTag(v, scope){
+    if (scope === "pi"){
+      if (v === "full") return {cls:"have", t:"有"};
+      if (v === "part") return {cls:"part", t:"部分"};
+      return {cls:"none", t:"无"};
+    }
+    if (v === "core") return {cls:"have", t:"核心"};
+    if (v === "rel")  return {cls:"part", t:"相关"};
+    return {cls:"none", t:"无关"};
+  }
+
+  function render(){
+    // note
+    noteEl.innerHTML = VIEWS[state.view] || "";
+
+    // tabs
+    tabs.forEach(function(t){
+      t.setAttribute("aria-selected", String(t.dataset.view === state.view));
+    });
+
+    // bands
+    Array.prototype.forEach.call(stackEl.children, function(b){
+      var v = state.view;
+      b.classList.remove("is-dim", "is-focus");
+      b.setAttribute("aria-pressed", String(b.dataset.id === state.selected));
+      var mark = b.querySelector(".b-mark");
+      mark.textContent = "";
+
+      if (v === "stack"){ return; }
+
+      var tag;
+      if (v === "pi"){
+        tag = coverTag(b.dataset.pi, "pi");
+        if (b.dataset.pi === "none") b.classList.add("is-dim");
+        mark.textContent = tag.t;
+        mark.dataset.kind = tag.cls;
+      } else if (v === "jd1"){
+        tag = coverTag(b.dataset.j1, "jd");
+        if (!b.dataset.j1) b.classList.add("is-dim"); else b.classList.add("is-focus");
+        if (b.dataset.j1){ mark.textContent = tag.t; mark.dataset.kind = tag.cls; }
+      } else if (v === "jd2"){
+        tag = coverTag(b.dataset.j2, "jd");
+        if (!b.dataset.j2) b.classList.add("is-dim"); else b.classList.add("is-focus");
+        if (b.dataset.j2){ mark.textContent = tag.t; mark.dataset.kind = tag.cls; }
+      }
+    });
+    // mark kind coloring
+    Array.prototype.forEach.call(stackEl.querySelectorAll(".b-mark"), function(m){
+      m.style.background = "transparent";
+      var k = m.dataset.kind;
+      if (!k || !m.textContent) return;
+      if (k === "have") m.style.background = "oklch(0.55 0.09 155 / 0.9)", m.style.borderColor = "transparent", m.style.color = "white";
+      if (k === "part") m.style.background = "oklch(0.62 0.10 70 / 0.92)", m.style.borderColor = "transparent", m.style.color = "white";
+    });
+
+    // detail
+    if (!state.selected){
+      detailEl.innerHTML =
+        '<div class="intro">' +
+        '<h2>怎么读这张图</h2>' +
+        '<p>整个平台是自上而下的一摞层：最上面 1 层是「业务」，下面 7 层是平台要沉淀的「底座」。</p>' +
+        '<ol>' +
+        '<li>点左侧任意一层，看它要做什么、对应 Java 世界的什么、pi 里有没有。</li>' +
+        '<li>切上面的视图，看 <b>pi</b> 与两份 JD 各自落在哪几层。</li>' +
+        '<li>越靠下的层越底层，也越「企业级」。</li>' +
+        '</ol></div>';
+      return;
+    }
+
+    var L = LAYERS.filter(function(x){ return x.id === state.selected; })[0];
+    var piTag = coverTag(L.pi, "pi");
+    var tags = '<span class="tag ' + piTag.cls + '">pi：' + piTag.t + '</span>';
+    if (L.j1) tags += '<span class="tag ' + coverTag(L.j1,"jd").cls + '">上一份 JD：' + coverTag(L.j1,"jd").t + '</span>';
+    if (L.j2) tags += '<span class="tag ' + coverTag(L.j2,"jd").cls + '">这一份 JD：' + coverTag(L.j2,"jd").t + '</span>';
+
+    detailEl.innerHTML =
+      '<p class="d-eyebrow">' + (L.id === "app" ? "业务层" : "底座层") + '</p>' +
+      '<h2>' + L.name + '</h2>' +
+      '<p class="d-sub">' + L.sub + '</p>' +
+      '<dl>' +
+      '<dt>做什么</dt><dd>' + L.what + '</dd>' +
+      '<dt>Java 类比</dt><dd><span class="code">' + L.analogy + '</span></dd>' +
+      '<dt>pi 里对应</dt><dd>' + L.pi + '</dd>' +
+      '<dt>对应 JD</dt><dd>' + L.jd + '</dd>' +
+      '<dt>企业级要点</dt><dd>' + L.ent + '</dd>' +
+      '</dl>' +
+      '<div class="tag-row">' + tags + '</div>';
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

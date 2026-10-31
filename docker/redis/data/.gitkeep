@@ -1,0 +1,1 @@
+# Redis AOF 数据会写到这里（容器内 /data，由 docker-compose 绑定挂载）

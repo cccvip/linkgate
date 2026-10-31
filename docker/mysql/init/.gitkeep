@@ -1,0 +1,2 @@
+# 首次启动 MySQL 时会执行本目录下的 *.sql（容器内 /docker-entrypoint-initdb.d）。
+# LinkGate 的建表脚本将在 T2.12（MySQL 持久化）落地后放到这里。

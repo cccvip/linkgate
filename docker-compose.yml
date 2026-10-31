@@ -1,0 +1,63 @@
+# LinkGate 本地依赖：Redis + MySQL
+#
+# 数据持久化到本机目录（可直接打开查看）：
+#   ./docker/redis/data   ← Redis AOF
+#   ./docker/mysql/data   ← MySQL 数据文件
+#   ./docker/mysql/init   ← 首次初始化执行的 SQL
+#
+# 网络：端口只发布到 127.0.0.1（本机 localhost 可直连，不暴露到局域网）。
+#       Docker Desktop 4.19 不支持 network_mode: host；如需 host 网络请升级到 4.34+。
+#
+# 用法：
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f mysql
+#   docker compose down            # 停止（保留本机数据目录）
+#
+# 查看实际挂载路径：
+#   docker inspect -f '{{json .Mounts}}' linkgate-mysql
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: linkgate-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mysql:
+    image: mysql:8.4
+    container_name: linkgate-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: linkgate
+      MYSQL_DATABASE: linkgate
+      MYSQL_USER: linkgate
+      MYSQL_PASSWORD: linkgate
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-plinkgate"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+networks:
+  default:
+    name: linkgate-local
+    driver: bridge

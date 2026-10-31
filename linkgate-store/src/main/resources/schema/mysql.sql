@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS lg_session (
+  session_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  user_id    VARCHAR(64) NOT NULL,
+  device_id  VARCHAR(64) NOT NULL,
+  state      VARCHAR(24) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_session_user_device (user_id, device_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS lg_message (
+  message_id VARCHAR(64) NOT NULL PRIMARY KEY,
+  from_user  VARCHAR(64) NOT NULL,
+  to_user    VARCHAR(64) NOT NULL,
+  seq        BIGINT NOT NULL,
+  payload    BLOB NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_message_to_user_seq (to_user, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
