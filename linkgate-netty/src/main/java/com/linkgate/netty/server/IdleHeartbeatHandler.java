@@ -30,6 +30,7 @@ public class IdleHeartbeatHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
             if (idle.state() == IdleState.WRITER_IDLE) {
+                log.info("heartbeat -> {}", ctx.channel());
                 ctx.writeAndFlush(Frame.of(MsgType.HEARTBEAT.code(), 0L));
                 return;
             }

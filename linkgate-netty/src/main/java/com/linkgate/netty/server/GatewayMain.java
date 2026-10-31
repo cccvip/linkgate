@@ -22,6 +22,7 @@ public final class GatewayMain {
     }
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("logback.configurationFile", "linkgate-logback.xml");
         GatewayConfig config = GatewayConfig.fromEnv();
         GatewayBootstrap bootstrap = GatewayBootstrap.create(config);
         Runtime.getRuntime().addShutdownHook(new Thread(bootstrap::close, "linkgate-shutdown"));
