@@ -50,7 +50,7 @@ public class MultiSyncHandler implements CommandHandler {
                 return;
             }
 
-            byte[] payload = JsonCodec.encode(new ChatDelivery(session.userId(), request.text()));
+            byte[] payload = JsonCodec.encode(new ChatDelivery(messageId, session.userId(), request.text()));
             int delivered = multiDeviceSync.syncToOtherDevices(
                     session.userId(), session.sessionId(), messageId, payload);
             reply(ctx, seq, MsgType.MULTI_SYNC_ACK, new AckResponse("SYNCED:" + delivered));

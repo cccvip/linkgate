@@ -66,7 +66,7 @@ public class ChatHandler implements CommandHandler {
                 return;
             }
 
-            byte[] payload = JsonCodec.encode(new ChatDelivery(sender.userId(), request.text()));
+            byte[] payload = JsonCodec.encode(new ChatDelivery(messageId, sender.userId(), request.text()));
             Message message = journal.append(messageId, sender.userId(), request.toUserId(), payload);
             DeliveryResult result = deliveryService.deliver(message);
             if (result.delivered()) {

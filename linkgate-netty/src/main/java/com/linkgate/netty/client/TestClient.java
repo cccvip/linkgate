@@ -1,11 +1,16 @@
 package com.linkgate.netty.client;
 
+import com.linkgate.core.codec.JsonCodec;
+import com.linkgate.core.protocol.AckRequest;
+import com.linkgate.core.protocol.ChatDelivery;
 import com.linkgate.netty.protocol.Frame;
 import com.linkgate.netty.protocol.GatewayMessageDecoder;
 import com.linkgate.netty.protocol.GatewayMessageEncoder;
+import com.linkgate.netty.protocol.MsgType;
 import com.linkgate.netty.protocol.ProtocolDecoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -14,6 +19,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 简易可脚本化客户端：连接网关、发送 {@link Frame}、阻塞等待回帧。
@@ -28,6 +34,7 @@ public final class TestClient implements AutoCloseable {
     private final BlockingQueue<Frame> inbound = new LinkedBlockingQueue<>();
 
     private Channel channel;
+    private final AtomicLong ackSeq = new AtomicLong(1);
 
     public TestClient(String host, int port) {
         this.host = host;
@@ -46,7 +53,10 @@ public final class TestClient implements AutoCloseable {
                         ch.pipeline().addLast("messageEncoder", new GatewayMessageEncoder());
                         ch.pipeline().addLast("capture", new SimpleChannelInboundHandler<Frame>() {
                             @Override
-                            protected void channelRead0(io.netty.channel.ChannelHandlerContext ctx, Frame frame) {
+                            protected void channelRead0(ChannelHandlerContext ctx, Frame frame) {
+                                if (frame.type() == MsgType.CHAT.code()) {
+                                    autoAck(ctx, frame);
+                                }
                                 inbound.add(frame);
                             }
                         });
@@ -62,6 +72,20 @@ public final class TestClient implements AutoCloseable {
 
     public void send(Frame frame) {
         channel.writeAndFlush(frame);
+    }
+
+    /** 收到 CHAT 投递时自动回 ACK，避免服务端超时重传。 */
+    private void autoAck(ChannelHandlerContext ctx, Frame frame) {
+        try {
+            ChatDelivery delivery = JsonCodec.decode(frame.body(), ChatDelivery.class);
+            if (delivery.messageId() != null && !delivery.messageId().isBlank()) {
+                Frame ack = Frame.of(MsgType.ACK.code(), ackSeq.getAndIncrement(),
+                        JsonCodec.encode(new AckRequest(delivery.messageId())));
+                ctx.writeAndFlush(ack);
+            }
+        } catch (RuntimeException ignored) {
+            // 非 JSON 投递或解码失败则忽略
+        }
     }
 
     /** 阻塞等待下一帧，超时返回 {@code null}。 */

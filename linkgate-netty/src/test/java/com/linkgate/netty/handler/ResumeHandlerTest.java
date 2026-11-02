@@ -46,9 +46,9 @@ class ResumeHandlerTest {
     void replaysMessagesAfterLastSeq() {
         EmbeddedChannel ch = channel();
         login(ch, "s1", "bob");
-        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("alice", "m1")));
-        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("alice", "m2")));
-        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("alice", "m3")));
+        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("m1", "alice", "m1")));
+        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("m2", "alice", "m2")));
+        journal.append("alice", "bob", JsonCodec.encode(new ChatDelivery("m3", "alice", "m3")));
 
         ch.writeInbound(Frame.of(MsgType.RESUME.code(), 9L, JsonCodec.encode(new ResumeRequest(1))));
 

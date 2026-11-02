@@ -1,5 +1,7 @@
 package com.linkgate.core.route;
 
+import com.linkgate.core.codec.JsonCodec;
+import com.linkgate.core.protocol.ChatDelivery;
 import com.linkgate.core.message.AckTracker;
 import com.linkgate.core.message.DeliveryResult;
 import com.linkgate.core.message.DeliveryService;
@@ -71,9 +73,10 @@ public final class GroupFanout {
         int delivered = 0;
         for (String member : members(groupId)) {
             String perMemberId = messageId + '@' + member;
+            byte[] perMemberPayload = withMessageId(payload, perMemberId);
             Message message = (journal != null)
-                    ? journal.append(perMemberId, fromUserId, member, payload)
-                    : new Message(perMemberId, fromUserId, member, 0L, payload);
+                    ? journal.append(perMemberId, fromUserId, member, perMemberPayload)
+                    : new Message(perMemberId, fromUserId, member, 0L, perMemberPayload);
             DeliveryResult result = delivery.deliver(message);
             if (result.delivered() && ackTracker != null) {
                 ackTracker.track(message);
@@ -81,5 +84,15 @@ public final class GroupFanout {
             delivered += result.deliveredCount();
         }
         return delivered;
+    }
+
+    /** 给每个成员的载荷注入其独立的 messageId（群聊 ACK 需要 per-member id）。 */
+    private static byte[] withMessageId(byte[] payload, String messageId) {
+        try {
+            ChatDelivery delivery = JsonCodec.decode(payload, ChatDelivery.class);
+            return JsonCodec.encode(new ChatDelivery(messageId, delivery.fromUserId(), delivery.text()));
+        } catch (RuntimeException e) {
+            return payload;
+        }
     }
 }

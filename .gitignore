@@ -21,6 +21,7 @@ run-gateway.ps1
 
 # ---- 日志 ----
 *.log
+*.log.gz
 logs/*
 !logs/.gitkeep
 
