@@ -1,38 +1,101 @@
 .root {
-    -fx-base: #1a1f26;
-    -fx-background: #111418;
-    -fx-control-inner-background: #1a1f26;
-    -fx-text-fill: #d7dde5;
-    -fx-accent: #4cc2ff;
-}
-
-.label {
-    -fx-text-fill: #d7dde5;
-}
-
-.text-field {
-    -fx-background-color: #111418;
-    -fx-text-fill: #d7dde5;
-    -fx-border-color: #2a313c;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-}
-
-.text-area {
-    -fx-control-inner-background: #111418;
-    -fx-text-fill: #d7dde5;
-    -fx-font-family: "Consolas", "Courier New";
+    -fx-base: #171a20;
+    -fx-background: #0f1115;
+    -fx-control-inner-background: #171a20;
+    -fx-text-fill: #e8eaed;
+    -fx-accent: #07c160;
     -fx-font-size: 13px;
 }
 
+.label {
+    -fx-text-fill: #e8eaed;
+}
+
+.text-field {
+    -fx-background-color: #1e2229;
+    -fx-text-fill: #e8eaed;
+    -fx-border-color: #2a313c;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 7 10 7 10;
+}
+
+.list-view {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: #171a20;
+    -fx-border-color: transparent;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e8eaed;
+    -fx-padding: 10 12 10 12;
+}
+
+.list-cell:filled:selected {
+    -fx-background-color: #232831;
+}
+
 .button {
-    -fx-background-color: #4cc2ff;
-    -fx-text-fill: #04121c;
+    -fx-background-color: #07c160;
+    -fx-text-fill: #ffffff;
     -fx-font-weight: bold;
-    -fx-background-radius: 4;
+    -fx-background-radius: 6;
     -fx-cursor: hand;
+    -fx-padding: 7 14 7 14;
 }
 
 .button:hover {
-    -fx-background-color: #6fd0ff;
+    -fx-background-color: #0bd96d;
+}
+
+/* 左侧导航栏 */
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8a94a3;
+    -fx-font-size: 14px;
+    -fx-font-weight: normal;
+    -fx-background-radius: 0;
+    -fx-padding: 16 10 16 10;
+    -fx-alignment: center;
+}
+
+.nav-button:hover {
+    -fx-background-color: #1e2229;
+    -fx-text-fill: #e8eaed;
+}
+
+.nav-button:selected {
+    -fx-background-color: #1c2b22;
+    -fx-text-fill: #07c160;
+    -fx-font-weight: bold;
+}
+
+/* 聊天气泡 */
+.bubble-mine {
+    -fx-background-color: #07c160;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 9 13 9 13;
+    -fx-background-radius: 14;
+}
+
+.bubble-theirs {
+    -fx-background-color: #2a313c;
+    -fx-text-fill: #e8eaed;
+    -fx-padding: 9 13 9 13;
+    -fx-background-radius: 14;
+}
+
+/* 面板标题 */
+.panel-title {
+    -fx-text-fill: #8a94a3;
+    -fx-font-size: 12px;
+}
+
+.status-connected {
+    -fx-text-fill: #07c160;
+}
+
+.status-disconnected {
+    -fx-text-fill: #8a94a3;
 }

@@ -72,6 +72,9 @@ public final class GroupFanout {
     public int broadcast(String groupId, String fromUserId, String messageId, byte[] payload) {
         int delivered = 0;
         for (String member : members(groupId)) {
+            if (member.equals(fromUserId)) {
+                continue;
+            }
             String perMemberId = messageId + '@' + member;
             byte[] perMemberPayload = withMessageId(payload, perMemberId);
             Message message = (journal != null)
@@ -90,7 +93,7 @@ public final class GroupFanout {
     private static byte[] withMessageId(byte[] payload, String messageId) {
         try {
             ChatDelivery delivery = JsonCodec.decode(payload, ChatDelivery.class);
-            return JsonCodec.encode(new ChatDelivery(messageId, delivery.fromUserId(), delivery.text()));
+            return JsonCodec.encode(new ChatDelivery(messageId, delivery.groupId(), delivery.fromUserId(), delivery.text()));
         } catch (RuntimeException e) {
             return payload;
         }

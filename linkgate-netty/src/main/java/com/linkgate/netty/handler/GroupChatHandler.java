@@ -53,7 +53,7 @@ public class GroupChatHandler implements CommandHandler {
                 return;
             }
 
-            byte[] payload = JsonCodec.encode(new ChatDelivery(messageId, sender.userId(), request.text()));
+            byte[] payload = JsonCodec.encode(new ChatDelivery(messageId, request.groupId(), sender.userId(), request.text()));
             int delivered = fanout.broadcast(request.groupId(), sender.userId(), messageId, payload);
             reply(ctx, seq, MsgType.GROUP_ACK, new AckResponse(delivered > 0 ? "DELIVERED" : "EMPTY"));
         } catch (RuntimeException e) {

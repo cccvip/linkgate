@@ -108,7 +108,7 @@ class LoginHandlerTest {
     @Test
     void replaysOfflineMessagesOnLogin() {
         offlineStore.store(new Message("m1", "alice", "u1", 1L,
-                JsonCodec.encode(new ChatDelivery("msg-offline-1", "alice", "see you online"))));
+                JsonCodec.encode(new ChatDelivery("msg-offline-1", null, "alice", "see you online"))));
 
         EmbeddedChannel ch = channel();
         login(ch, "u1", "d1", 7L);
