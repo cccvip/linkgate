@@ -19,6 +19,7 @@
         <module>linkgate-store</module>
         <module>linkgate-admin</module>
         <module>linkgate-bench</module>
+        <module>linkgate-gui</module>
     </modules>
 
     <properties>
@@ -36,6 +37,7 @@
         <logback.version>1.5.8</logback.version>
         <spring-boot.version>3.3.4</spring-boot.version>
         <junit.version>5.11.0</junit.version>
+        <javafx.version>21.0.4</javafx.version>
     </properties>
 
     <dependencyManagement>
@@ -69,6 +71,11 @@
             <dependency>
                 <groupId>com.linkgate</groupId>
                 <artifactId>linkgate-bench</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.linkgate</groupId>
+                <artifactId>linkgate-gui</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

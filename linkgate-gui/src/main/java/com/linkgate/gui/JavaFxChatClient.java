@@ -1,108 +1,103 @@
-package com.linkgate.netty.client;
+package com.linkgate.gui;
 
 import com.linkgate.core.codec.JsonCodec;
 import com.linkgate.core.protocol.AckRequest;
 import com.linkgate.core.protocol.ChatRequest;
 import com.linkgate.core.protocol.LoginRequest;
+import com.linkgate.netty.client.TestClient;
 import com.linkgate.netty.protocol.Frame;
 import com.linkgate.netty.protocol.MsgType;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 /**
- * 极简 Swing 桌面客户端：连接网关、登录、收发点对点消息，用于本地演示。
+ * JavaFX 桌面客户端：连接网关、登录、收发点对点消息。
  *
- * <p>线程模型：Netty 入站帧在后台 reader 线程取回，经 {@link SwingUtilities#invokeLater} 投递到 EDT 刷新界面。</p>
+ * <p>线程模型：Netty 入站帧在后台 reader 线程取回，经 {@link Platform#runLater} 投递到 JavaFX 线程刷新界面。</p>
  */
-public final class SwingChatClient {
+public final class JavaFxChatClient extends Application {
 
-    private final JFrame frame;
-    private final JTextField hostField = new JTextField("127.0.0.1", 9);
-    private final JTextField portField = new JTextField("8080", 5);
-    private final JTextField userIdField = new JTextField(10);
-    private final JTextField deviceIdField = new JTextField("default", 8);
-    private final JTextField toField = new JTextField(10);
-    private final JTextField textField = new JTextField(24);
-    private final JTextField rawField = new JTextField(40);
-    private final JTextArea log = new JTextArea();
-    private final JLabel status = new JLabel("disconnected");
+    private final TextField hostField = new TextField("127.0.0.1");
+    private final TextField portField = new TextField("8080");
+    private final TextField userIdField = new TextField();
+    private final TextField deviceIdField = new TextField("default");
+    private final TextField toField = new TextField();
+    private final TextField textField = new TextField();
+    private final TextField commandField = new TextField();
+    private final TextArea log = new TextArea();
+    private final Label status = new Label("disconnected");
 
     private final AtomicLong seq = new AtomicLong(1);
     private volatile TestClient client;
 
-    public SwingChatClient() {
-        frame = new JFrame("LinkGate Swing Client");
-        frame.setLayout(new BorderLayout());
-
-        JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        top.add(new JLabel("host"));
-        top.add(hostField);
-        top.add(new JLabel("port"));
-        top.add(portField);
-        top.add(new JLabel("userId"));
-        top.add(userIdField);
-        top.add(new JLabel("deviceId"));
-        top.add(deviceIdField);
-        JButton connect = new JButton("连接登录");
-        connect.addActionListener(e -> connectAndLogin());
-        top.add(connect);
-        top.add(status);
-        frame.add(top, BorderLayout.NORTH);
-
-        log.setEditable(false);
-        log.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        frame.add(new JScrollPane(log), BorderLayout.CENTER);
-
-        JPanel bottom = new JPanel(new GridLayout(2, 1));
-        JPanel chatRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        chatRow.add(new JLabel("to"));
-        chatRow.add(toField);
-        chatRow.add(new JLabel("text"));
-        chatRow.add(textField);
-        JButton send = new JButton("发送");
-        send.addActionListener(e -> sendChat());
-        chatRow.add(send);
-        bottom.add(chatRow);
-
-        JPanel rawRow = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        rawRow.add(new JLabel("命令"));
-        rawField.addActionListener(e -> execRaw());
-        rawRow.add(rawField);
-        JButton exec = new JButton("执行");
-        exec.addActionListener(e -> execRaw());
-        rawRow.add(exec);
-        bottom.add(rawRow);
-        frame.add(bottom, BorderLayout.SOUTH);
-
-        frame.setSize(780, 540);
-        frame.setLocationRelativeTo(null);
-        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        frame.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                logout();
-            }
-        });
+    public static void main(String[] args) {
+        launch(args);
     }
 
-    public void start() {
-        frame.setVisible(true);
+    @Override
+    public void start(Stage stage) {
+        stage.setTitle("LinkGate Client");
+
+        BorderPane root = new BorderPane();
+        root.setPadding(new Insets(10));
+
+        HBox top = new HBox(8);
+        top.getChildren().addAll(
+                new Label("host"), hostField,
+                new Label("port"), portField,
+                new Label("userId"), userIdField,
+                new Label("deviceId"), deviceIdField);
+        Button connect = new Button("连接登录");
+        connect.setOnAction(e -> connectAndLogin());
+        top.getChildren().addAll(connect, status);
+        root.setTop(top);
+
+        log.setEditable(false);
+        log.setWrapText(true);
+        VBox.setVgrow(log, Priority.ALWAYS);
+        root.setCenter(log);
+
+        HBox chatRow = new HBox(8);
+        chatRow.getChildren().addAll(
+                new Label("to"), toField,
+                new Label("text"), textField);
+        Button send = new Button("发送");
+        send.setOnAction(e -> sendChat());
+        HBox.setHgrow(textField, Priority.ALWAYS);
+        chatRow.getChildren().add(send);
+
+        HBox commandRow = new HBox(8);
+        commandRow.getChildren().add(new Label("命令"));
+        HBox.setHgrow(commandField, Priority.ALWAYS);
+        commandField.setOnAction(e -> execCommand());
+        Button exec = new Button("执行");
+        exec.setOnAction(e -> execCommand());
+        commandRow.getChildren().addAll(commandField, exec);
+
+        VBox bottom = new VBox(6, chatRow, commandRow);
+        bottom.setPadding(new Insets(8, 0, 0, 0));
+        root.setBottom(bottom);
+
+        Scene scene = new Scene(root, 820, 560);
+        scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+        stage.setScene(scene);
+        stage.setOnCloseRequest(e -> logout());
+        stage.show();
+
         append("host/port/userId 填好后点「连接登录」，或用底部命令框执行 login/chat/ack/raw");
     }
 
@@ -112,11 +107,11 @@ public final class SwingChatClient {
             return;
         }
         setStatus("connecting...");
-        new Thread(() -> {
+        Thread thread = new Thread(() -> {
             try {
                 TestClient c = new TestClient(host(), port()).connect();
                 client = c;
-                SwingUtilities.invokeLater(() -> {
+                Platform.runLater(() -> {
                     setStatus("connected");
                     append("connected to " + host() + ":" + port());
                 });
@@ -125,38 +120,42 @@ public final class SwingChatClient {
                 if (!userId.isEmpty()) {
                     String deviceId = deviceIdField.getText().trim();
                     sendLogin(c, userId, deviceId.isEmpty() ? "default" : deviceId);
-                    SwingUtilities.invokeLater(() -> append("> login " + userId + " " + deviceId));
+                    Platform.runLater(() -> append("> login " + userId + " " + deviceId));
                     startHeartbeat(c);
                 }
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() -> {
+                Platform.runLater(() -> {
                     setStatus("failed");
                     append("connect failed: " + e.getMessage());
                 });
             }
-        }, "gateway-connect").start();
+        }, "gateway-connect");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void startReader(TestClient c) {
-        new Thread(() -> {
+        Thread thread = new Thread(() -> {
             while (c.isActive()) {
                 try {
                     Frame frame = c.awaitFrame(200);
                     if (frame != null && !isHeartbeat(frame)) {
                         String text = formatInbound(frame);
-                        SwingUtilities.invokeLater(() -> append(text));
+                        Platform.runLater(() -> append(text));
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
                 }
             }
-        }, "gateway-reader").start();
+        }, "gateway-reader");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /** 每 25 秒发一次心跳，避免服务端 60 秒读空闲超时把连接断开。 */
     private void startHeartbeat(TestClient c) {
-        new Thread(() -> {
+        Thread thread = new Thread(() -> {
             while (c.isActive()) {
                 try {
                     Thread.sleep(25000);
@@ -168,23 +167,14 @@ public final class SwingChatClient {
                     return;
                 }
             }
-        }, "gateway-heartbeat").start();
+        }, "gateway-heartbeat");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void sendLogin(TestClient c, String userId, String deviceId) {
         c.send(Frame.of(MsgType.LOGIN.code(), seq.getAndIncrement(),
                 JsonCodec.encode(new LoginRequest(userId, deviceId))));
-    }
-
-    /** 登出：优雅断开网关连接并重置状态，窗口保持打开可再次登录。 */
-    private void logout() {
-        TestClient c = client;
-        if (c != null) {
-            c.close();
-            client = null;
-            append("logged out");
-            setStatus("disconnected");
-        }
     }
 
     private void sendChat() {
@@ -202,12 +192,13 @@ public final class SwingChatClient {
         c.send(Frame.of(MsgType.CHAT.code(), seq.getAndIncrement(),
                 JsonCodec.encode(new ChatRequest(UUID.randomUUID().toString(), to, text))));
         append("> chat " + to + " " + text);
-        textField.setText("");
+        textField.clear();
     }
 
-    private void execRaw() {
-        String line = rawField.getText().trim();
-        rawField.setText("");
+    private void execCommand() {
+        TestClient c = client;
+        String line = commandField.getText().trim();
+        commandField.clear();
         if (line.isEmpty()) {
             return;
         }
@@ -215,11 +206,9 @@ public final class SwingChatClient {
         String command = parts[0].toLowerCase();
         if (command.equals("quit") || command.equals("exit")) {
             logout();
-            frame.dispose();
-            System.exit(0);
+            Platform.exit();
             return;
         }
-        TestClient c = client;
         if (c == null || !c.isActive()) {
             append("not connected");
             return;
@@ -235,7 +224,7 @@ public final class SwingChatClient {
                 if (parts.length >= 3) {
                     c.send(Frame.of(MsgType.CHAT.code(), seq.getAndIncrement(),
                             JsonCodec.encode(new ChatRequest(UUID.randomUUID().toString(), parts[1],
-                                    String.join(" ", Arrays.copyOfRange(parts, 2, parts.length))))));
+                                    String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length))))));
                 }
             }
             case "ack" -> {
@@ -248,12 +237,23 @@ public final class SwingChatClient {
                 if (parts.length >= 3) {
                     byte type = (byte) Integer.parseInt(parts[1]);
                     c.send(Frame.of(type, seq.getAndIncrement(),
-                            String.join(" ", Arrays.copyOfRange(parts, 2, parts.length))
+                            String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length))
                                     .getBytes(StandardCharsets.UTF_8)));
                 }
             }
             case "help" -> append("login <userId> [deviceId] | chat <to> <text> | ack <messageId> | raw <type> <json> | quit");
             default -> append("unknown: " + command);
+        }
+    }
+
+    /** 登出：优雅断开网关连接并重置状态，可再次登录。 */
+    private void logout() {
+        TestClient c = client;
+        if (c != null) {
+            c.close();
+            client = null;
+            append("logged out");
+            setStatus("disconnected");
         }
     }
 
@@ -267,11 +267,11 @@ public final class SwingChatClient {
 
     private void setStatus(String text) {
         status.setText(text);
+        status.setStyle(text.equals("connected") ? "-fx-text-fill:#3ddc84;" : "-fx-text-fill:#8a94a3;");
     }
 
     private void append(String text) {
-        log.append(text + "\n");
-        log.setCaretPosition(log.getDocument().getLength());
+        log.appendText(text + "\n");
     }
 
     private static String formatInbound(Frame frame) {
@@ -283,10 +283,5 @@ public final class SwingChatClient {
 
     private static boolean isHeartbeat(Frame frame) {
         return frame.type() == MsgType.HEARTBEAT.code() || frame.type() == MsgType.HEARTBEAT_ACK.code();
-    }
-
-    public static void main(String[] args) {
-        System.setProperty("logback.configurationFile", "linkgate-logback.xml");
-        SwingUtilities.invokeLater(() -> new SwingChatClient().start());
     }
 }

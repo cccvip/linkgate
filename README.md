@@ -23,7 +23,8 @@ linkgate
 ├── linkgate-ai        LLM 客户端、token 流、背压、检查点、流式桥接
 ├── linkgate-store     Redis（在线状态 / 路由）与 MySQL（消息 / 元数据）
 ├── linkgate-admin     Spring Boot 组装根 + actuator 管理面
-└── linkgate-bench     压测客户端（IDLE / ACTIVE）
+├── linkgate-bench     压测客户端（IDLE / ACTIVE）
+└── linkgate-gui       JavaFX 桌面客户端
 ```
 
 依赖方向（无环）：
@@ -33,6 +34,7 @@ linkgate
 - `netty` → `core` / `ai` / `store`
 - `admin` → `core` / `netty` / `ai` / `store`
 - `bench` → `core` / `netty`
+- `gui` → `netty`
 
 > `core` 允许使用 `netty-common` 这类**无 IO 工具库**（如 `HashedWheelTimer`），但不引网络栈；数据面保持裸 Netty，Spring Boot 只出现在 `admin` 组装层。
 
@@ -71,21 +73,22 @@ java -jar linkgate-netty\target\linkgate-netty-0.1.0-SNAPSHOT-all.jar
 
 | 客户端 | 入口 | 用途 |
 |---|---|---|
-| Swing GUI | `com.linkgate.netty.client.SwingChatClient` | 桌面演示：连接登录、收发消息、窗口 X 登出 |
+| JavaFX GUI | `com.linkgate.gui.JavaFxChatClient` | 桌面演示：连接登录、收发消息、登出 |
 | 脚本演示 | `com.linkgate.netty.client.ClientDemo` | 两个客户端完成登录 → 聊天 → 投递 |
 | 可脚本化 | `com.linkgate.netty.client.TestClient` | 程序化收发 `Frame`，供集成测试 |
 | 压测 | `com.linkgate.bench.BenchMain` | 多连接、P50/P99 采样 |
 
-Swing 桌面客户端：
+JavaFX 桌面客户端（先 install 依赖，再用 javafx-maven-plugin 启动）：
 
 ```powershell
-java -cp linkgate-netty\target\linkgate-netty-0.1.0-SNAPSHOT-all.jar com.linkgate.netty.client.SwingChatClient
+mvn -pl linkgate-gui -am install -DskipTests
+mvn -pl linkgate-gui javafx:run
 ```
 
 - 顶部填 `host / port / userId / deviceId`，点「连接登录」
 - 底部「to + text + 发送」发点对点消息
 - 底部「命令」框支持 `login / chat / ack / raw / help / quit`
-- 窗口 X = 登出（连接断开、窗口保留可再登录）；`quit` = 退出程序
+- 关闭窗口 = 登出（断开连接）；`quit` = 退出程序
 - 客户端每 25 秒发一次心跳，避免被服务端 60 秒读空闲超时断开
 
 压测客户端：

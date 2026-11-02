@@ -1,0 +1,38 @@
+.root {
+    -fx-base: #1a1f26;
+    -fx-background: #111418;
+    -fx-control-inner-background: #1a1f26;
+    -fx-text-fill: #d7dde5;
+    -fx-accent: #4cc2ff;
+}
+
+.label {
+    -fx-text-fill: #d7dde5;
+}
+
+.text-field {
+    -fx-background-color: #111418;
+    -fx-text-fill: #d7dde5;
+    -fx-border-color: #2a313c;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.text-area {
+    -fx-control-inner-background: #111418;
+    -fx-text-fill: #d7dde5;
+    -fx-font-family: "Consolas", "Courier New";
+    -fx-font-size: 13px;
+}
+
+.button {
+    -fx-background-color: #4cc2ff;
+    -fx-text-fill: #04121c;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #6fd0ff;
+}
