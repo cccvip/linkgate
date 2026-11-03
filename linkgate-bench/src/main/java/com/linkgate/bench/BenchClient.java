@@ -3,10 +3,9 @@ package com.linkgate.bench;
 import com.linkgate.core.codec.JsonCodec;
 import com.linkgate.core.protocol.LoginRequest;
 import com.linkgate.netty.protocol.Frame;
-import com.linkgate.netty.protocol.GatewayMessageDecoder;
-import com.linkgate.netty.protocol.GatewayMessageEncoder;
 import com.linkgate.netty.protocol.MsgType;
-import com.linkgate.netty.protocol.ProtocolDecoder;
+import com.linkgate.netty.protocol.WebSocketFrameDecoder;
+import com.linkgate.netty.protocol.WebSocketFrameEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -18,6 +17,13 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
+import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
+import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,10 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 自研 Netty 压测客户端：可建大量长连接，并按场景（空闲 / 活跃）施压。
- *
- * <p>长连接场景 wrk 不擅长，故自研。压测机需按 {@code docs/linkgate-bench-baseline.md} 调好
- * {@code ulimit}、端口范围与 JVM 参数。</p>
+ * 自研 Netty 压测客户端（WebSocket）：可建大量长连接，并按场景（空闲 / 活跃）施压。
  */
 public final class BenchClient implements AutoCloseable {
 
@@ -60,9 +63,10 @@ public final class BenchClient implements AutoCloseable {
         this.eventLoopThreads = eventLoopThreads;
     }
 
-    /** 建立 {@code count} 条连接（每条以唯一 userId 登录）。 */
+    /** 建立 {@code count} 条 WebSocket 连接（每条以唯一 userId 登录）。 */
     public void connect(int count) throws InterruptedException {
         group = new NioEventLoopGroup(eventLoopThreads);
+        URI uri = URI.create("ws://" + host + ":" + port + "/ws");
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(group)
                 .channel(NioSocketChannel.class)
@@ -76,9 +80,12 @@ public final class BenchClient implements AutoCloseable {
                                 latency, sent, received, () -> running, () -> scenario);
                         handlers.put(ch, handler);
                         ch.closeFuture().addListener(future -> handlers.remove(ch));
-                        ch.pipeline().addLast("frameDecoder", new ProtocolDecoder());
-                        ch.pipeline().addLast("messageDecoder", new GatewayMessageDecoder());
-                        ch.pipeline().addLast("messageEncoder", new GatewayMessageEncoder());
+                        ch.pipeline().addLast("httpCodec", new HttpClientCodec());
+                        ch.pipeline().addLast("httpAggregator", new HttpObjectAggregator(65536));
+                        ch.pipeline().addLast("wsProtocol", new WebSocketClientProtocolHandler(
+                                uri, WebSocketVersion.V13, null, true, EmptyHttpHeaders.INSTANCE, 65536));
+                        ch.pipeline().addLast("wsDecoder", new WebSocketFrameDecoder());
+                        ch.pipeline().addLast("wsEncoder", new WebSocketFrameEncoder());
                         ch.pipeline().addLast("bench", handler);
                     }
                 });
@@ -166,9 +173,12 @@ public final class BenchClient implements AutoCloseable {
         }
 
         @Override
-        public void channelActive(ChannelHandlerContext ctx) {
-            ctx.writeAndFlush(Frame.of(MsgType.LOGIN.code(), 1L,
-                    JsonCodec.encode(new LoginRequest(userId, "bench"))));
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
+                ctx.writeAndFlush(Frame.of(MsgType.LOGIN.code(), 1L,
+                        JsonCodec.encode(new LoginRequest(userId, "bench"))));
+            }
+            super.userEventTriggered(ctx, evt);
         }
 
         @Override

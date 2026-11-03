@@ -12,19 +12,21 @@ import com.linkgate.netty.handler.LoginHandler;
 import com.linkgate.netty.handler.MultiSyncHandler;
 import com.linkgate.netty.handler.ResumeHandler;
 import com.linkgate.netty.protocol.CommandDispatcher;
-import com.linkgate.netty.protocol.GatewayMessageDecoder;
-import com.linkgate.netty.protocol.GatewayMessageEncoder;
 import com.linkgate.netty.protocol.MsgType;
-import com.linkgate.netty.protocol.ProtocolDecoder;
+import com.linkgate.netty.protocol.WebSocketFrameDecoder;
+import com.linkgate.netty.protocol.WebSocketFrameEncoder;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 装配客户端连接的 pipeline：
- * 帧定界 → 消息编解码 → 空闲检测 → 连接限制 → 连接生命周期 → 命令分发。
+ * 装配 WebSocket 连接的 pipeline：
+ * HTTP 升级 → 文本帧编解码 → 空闲检测 → 连接限制 → 连接生命周期 → 命令分发。
  */
 public class GatewayChannelInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -48,9 +50,11 @@ public class GatewayChannelInitializer extends ChannelInitializer<SocketChannel>
 
     /** 抽出静态方法，便于脱离真实连接做单测。 */
     static void initPipeline(ChannelPipeline pipeline, GatewayComponents components) {
-        pipeline.addLast("frameDecoder", new ProtocolDecoder());
-        pipeline.addLast("messageDecoder", new GatewayMessageDecoder());
-        pipeline.addLast("messageEncoder", new GatewayMessageEncoder());
+        pipeline.addLast("httpCodec", new HttpServerCodec());
+        pipeline.addLast("httpAggregator", new HttpObjectAggregator(65536));
+        pipeline.addLast("wsProtocol", new WebSocketServerProtocolHandler("/ws"));
+        pipeline.addLast("wsDecoder", new WebSocketFrameDecoder());
+        pipeline.addLast("wsEncoder", new WebSocketFrameEncoder());
         pipeline.addLast("idleState",
                 new IdleStateHandler(IDLE_READER_SECONDS, IDLE_WRITER_SECONDS, 0, TimeUnit.SECONDS));
         pipeline.addLast("idleHeartbeat", new IdleHeartbeatHandler());

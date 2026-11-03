@@ -3,39 +3,9 @@ package com.linkgate.netty.protocol;
 import java.util.Arrays;
 
 /**
- * 协议帧：接入层 / 协议层之间传递的单位。
- *
- * <pre>
- * offset   0        2        3        4        5        6              14            18
- *          +--------+--------+--------+--------+--------+---------------+-------------+
- *          | magic  | version| flags  | type   | rsvd   | seq (long)    | bodyLength  |
- *          | 2B     | 1B     | 1B     | 1B     | 1B     | 8B            | 4B          |
- *          +--------+--------+--------+--------+--------+---------------+-------------+
- *          | body (bodyLength bytes)                                                   |
- *          +---------------------------------------------------------------------------+
- * </pre>
- *
- * <p>使用大端序。{@code bodyLength} 仅表示 body 字节数，不含帧头。</p>
+ * 协议帧：网关与业务层之间传递的单元（经 WebSocket 以 JSON 信封传输）。
  */
 public final class Frame {
-
-    /** 帧同步魔数 'L''G'。 */
-    public static final short MAGIC = (short) 0x4C47;
-
-    /** 协议版本。 */
-    public static final byte VERSION = 1;
-
-    /** 帧头长度：magic(2) + version(1) + flags(1) + type(1) + rsvd(1) + seq(8) + bodyLength(4)。 */
-    public static final int HEADER_LENGTH = 18;
-
-    /** length 字段相对帧起始的偏移。 */
-    public static final int LENGTH_FIELD_OFFSET = HEADER_LENGTH - 4;
-
-    /** length 字段宽度（字节）。 */
-    public static final int LENGTH_FIELD_LENGTH = 4;
-
-    /** body 上限，防止恶意超大帧（1 MiB）。 */
-    public static final int MAX_BODY_LENGTH = 1 << 20;
 
     public static final byte FLAG_NONE = 0;
     /** 高优先级，优先下发。 */
@@ -51,14 +21,10 @@ public final class Frame {
     private final byte[] body;
 
     public Frame(byte flags, byte type, long seq, byte[] body) {
-        byte[] actual = body == null ? EMPTY_BODY : body;
-        if (actual.length > MAX_BODY_LENGTH) {
-            throw new IllegalArgumentException("body too large: " + actual.length + " > " + MAX_BODY_LENGTH);
-        }
         this.flags = flags;
         this.type = type;
         this.seq = seq;
-        this.body = actual;
+        this.body = body == null ? EMPTY_BODY : body;
     }
 
     /** 便捷构造：无 flags 的普通帧。 */

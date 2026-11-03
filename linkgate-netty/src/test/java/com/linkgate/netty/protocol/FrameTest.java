@@ -4,19 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 class FrameTest {
-
-    @Test
-    void headerLayoutIsConsistent() {
-        assertEquals(18, Frame.HEADER_LENGTH);
-        assertEquals(Frame.HEADER_LENGTH - Frame.LENGTH_FIELD_LENGTH, Frame.LENGTH_FIELD_OFFSET);
-        assertEquals(14, Frame.LENGTH_FIELD_OFFSET);
-    }
 
     @Test
     void nullBodyBecomesEmpty() {
@@ -38,13 +30,6 @@ class FrameTest {
     void emptyBodyConvenience() {
         Frame frame = Frame.of((byte) 2, 9L);
         assertEquals(0, frame.bodyLength());
-    }
-
-    @Test
-    void rejectsOversizedBody() {
-        byte[] tooBig = new byte[Frame.MAX_BODY_LENGTH + 1];
-        assertThrows(IllegalArgumentException.class,
-                () -> new Frame(Frame.FLAG_NONE, (byte) 1, 1L, tooBig));
     }
 
     @Test

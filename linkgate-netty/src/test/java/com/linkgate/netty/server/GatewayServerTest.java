@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.linkgate.netty.protocol.GatewayMessageEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -38,15 +37,13 @@ class GatewayServerTest {
             EventLoopGroup group = new NioEventLoopGroup(1);
             try {
                 Bootstrap bootstrap = new Bootstrap();
-                bootstrap.group(group)
-                        .channel(NioSocketChannel.class)
+                bootstrap.group(group).channel(NioSocketChannel.class)
                         .handler(new ChannelInitializer<SocketChannel>() {
                             @Override
                             protected void initChannel(SocketChannel ch) {
-                                ch.pipeline().addLast(new GatewayMessageEncoder());
+                                // 空 pipeline，仅验证 TCP 建连
                             }
                         });
-
                 Channel channel = bootstrap.connect("127.0.0.1", server.port()).sync().channel();
                 assertTrue(channel.isActive(), "客户端应成功建连");
                 channel.close().sync();
